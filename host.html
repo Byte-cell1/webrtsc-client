@@ -84,6 +84,7 @@ h1 { font-size:17px; }
   display:flex;
   flex-direction:column;
 }
+.users-panel.hidden { display:none; }
 .users-list {
   flex:1;
   overflow-y:auto;
@@ -195,7 +196,7 @@ h1 { font-size:17px; }
 </div>
 
 <script>
-const WS_URL = 'wss://webrtsc-server.onrender.com';
+const WS_URL = 'wss://webrtsc-server-hb80.onrender.com';
 let ws, localStream, peers = {}, roomId = 'public', selectedUser = null, allUsers = {};
 
 async function init() {
