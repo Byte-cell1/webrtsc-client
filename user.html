@@ -3,506 +3,141 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User - Join Session</title>
+<title>User - WebRTC Meeting</title>
 <style>
-/* SAME BACKGROUND AS HOST */
-* { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', sans-serif; }
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
 body {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
-  color:#fff;
   padding:20px;
+  color:#fff;
 }
 .container {
   background: rgba(255,255,255,0.1);
   backdrop-filter: blur(20px);
-  padding:40px;
+  padding:30px 20px;
   border-radius:20px;
-  max-width:500px;
+  max-width:400px;
   width:100%;
-  box-shadow:0 20px 60px rgba(0,0,0,0.3);
   border:1px solid rgba(255,255,255,0.2);
 }
-.header {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:30px;
-}
-h1 { font-size:28px; }
-.menu-btn {
-  background: rgba(255,255,255,0.2);
-  border:none;
-  color:#fff;
-  padding:10px 15px;
-  border-radius:8px;
-  cursor:pointer;
-  font-weight:600;
-}
-.subtitle { text-align:center; opacity:0.8; margin-bottom:30px; }
-.input-group { margin-bottom:20px; }
-label { display:block; margin-bottom:8px; font-weight:600; }
+h2 { text-align:center; margin-bottom:20px; font-size:24px; }
 input {
   width:100%;
   padding:14px;
+  margin-bottom:15px;
   border-radius:10px;
-  border:2px solid rgba(255,255,255,0.2);
-  background:rgba(0,0,0,0.2);
+  border:2px solid rgba(255,255,255,0.3);
+  background: rgba(0,0,0,0.2);
   color:#fff;
   font-size:16px;
-  transition:0.3s;
 }
-input:focus { outline:none; border-color:#fff; background:rgba(0,0,0,0.3); }
-button {
+input::placeholder { color:rgba(255,255,255,0.6); }
+.btn {
   width:100%;
   padding:16px;
   border:none;
   border-radius:10px;
   background:#fff;
-  color:#1e3c72;
+  color:#667eea;
   font-size:18px;
   font-weight:700;
   cursor:pointer;
-  transition:0.3s;
+  transition:0.2s;
 }
-button:hover { transform:translateY(-2px); box-shadow:0 10px 30px rgba(0,0,0,0.3); }
-button:disabled { opacity:0.5; cursor:not-allowed; }
-
+.btn:active { transform:scale(0.98); }
 .status {
-  margin-top:20px;
-  padding:15px;
-  border-radius:10px;
-  background:rgba(0,0,0,0.3);
-  display:none;
+  text-align:center;
+  margin-top:15px;
+  font-size:14px;
+  opacity:0.9;
 }
-.status.show { display:block; }
-.status.error { background:rgba(255,0,0,0.3); border:1px solid rgba(255,0,0,0.5); }
-.status.success { background:rgba(0,255,0,0.3); border:1px solid rgba(0,255,0,0.5); }
-.status.info { background:rgba(0,123,255,0.3); border:1px solid rgba(0,123,255,0.5); }
-
-.mic-indicator {
-  width:100px;
-  height:100px;
-  margin:30px auto;
+#micIndicator {
+  width:80px;
+  height:80px;
   border-radius:50%;
-  background:rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.2);
+  margin:20px auto;
   display:none;
   align-items:center;
   justify-content:center;
-  font-size:50px;
-  animation:pulse 2s infinite;
-  border:3px solid rgba(255,255,255,0.3);
+  font-size:40px;
+}
+#micIndicator.active {
+  display:flex;
+  animation:pulse 1s infinite;
+  background:#4ade80;
 }
 @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.1); } }
-
-.network-status {
-  position:fixed;
-  top:20px;
-  right:20px;
-  padding:10px 20px;
-  border-radius:20px;
-  background:rgba(0,0,0,0.5);
-  font-size:14px;
-  backdrop-filter: blur(10px);
-}
-
-.log {
-  margin-top:20px;
-  max-height:150px;
-  overflow-y:auto;
-  font-size:12px;
-  opacity:0.7;
-  background: rgba(0,0,0,0.2);
-  padding:10px;
-  border-radius:8px;
-}
-.log-entry { padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.1); }
-
-.menu-panel {
-  position:fixed;
-  top:0;
-  right:-300px;
-  width:280px;
-  height:100vh;
-  background: rgba(0,0,0,0.8);
-  backdrop-filter: blur(20px);
-  padding:20px;
-  transition:0.3s;
-  border-left:1px solid rgba(255,255,255,0.2);
-}
-.menu-panel.show { right:0; }
-.menu-panel h3 { margin-bottom:20px; }
-.menu-item {
-  padding:12px;
-  background: rgba(255,255,255,0.1);
-  border-radius:8px;
-  margin-bottom:10px;
-  cursor:pointer;
-}
-.menu-item:hover { background: rgba(255,255,255,0.2); }
 </style>
 </head>
 <body>
-<div class="network-status" id="networkStatus">● Ready</div>
-
 <div class="container">
-  <div class="header">
-    <h1>Join Session</h1>
-    <button class="menu-btn" onclick="toggleMenu()">☰</button>
-  </div>
-
-  <p class="subtitle">Audio-only connection. Your microphone will be used.</p>
-
-  <div class="input-group">
-    <label>Your Full Name</label>
-    <input type="text" id="nameInput" placeholder="Enter your name" maxlength="50">
-  </div>
-
-  <div class="input-group">
-    <label>Room ID</label>
-    <input type="text" id="roomInput" placeholder="default" value="default">
-  </div>
-
-  <button id="joinBtn" onclick="joinSession()">Connect Microphone</button>
-
-  <div class="mic-indicator" id="micIndicator">🎤</div>
-
-  <div class="status" id="statusBox"></div>
-
-  <div class="log" id="logBox"></div>
-</div>
-
-<div class="menu-panel" id="menuPanel">
-  <h3>Settings</h3>
-  <div class="menu-item" onclick="testMic()">Test Microphone</div>
-  <div class="menu-item" onclick="showHelp()">Help & Support</div>
-  <div class="menu-item" onclick="clearLog()">Clear Log</div>
-  <div class="menu-item" onclick="toggleMenu()">Close Menu</div>
+  <h2>🎤 Join Meeting</h2>
+  <input type="text" id="nameInput" placeholder="Enter your full name">
+  <input type="text" id="roomInput" placeholder="Room ID" value="default">
+  <button class="btn" id="connectBtn">Connect Microphone</button>
+  <div id="micIndicator">🎤</div>
+  <div class="status" id="status">Enter name + room, then connect</div>
 </div>
 
 <script>
-const CONFIG = {
-  WS_URL = 'wss://webrtsc-server.onrender.com';// CHANGE THIS
-  ICE_SERVERS: [
-    {urls: 'stun:stun.l.google.com:19302'},
-    {urls: 'stun:stun1.l.google.com:19302'}
-  ],
-  RECONNECT_DELAY: 3000,
-  MAX_RECONNECT: 5
-};
+const WS_URL = 'wss://webrtsc-server.onrender.com';
+let ws, localStream, pc, roomId, myName;
 
-class UserClient {
-  constructor() {
-    this.ws = null;
-    this.pc = null;
-    this.localStream = null;
-    this.userId = localStorage.getItem('userId') || this.generateId();
-    this.roomId = 'default';
-    this.userName = '';
-    this.reconnectAttempts = 0;
-    this.isConnected = false;
-    localStorage.setItem('userId', this.userId);
-    this.init();
+document.getElementById('connectBtn').addEventListener('click', async () => {
+  myName = document.getElementById('nameInput').value.trim();
+  roomId = document.getElementById('roomInput').value.trim() || 'default';
+
+  if(myName.length < 2) {
+    alert('Please enter your full name');
+    return;
   }
 
-  generateId() {
-    return 'user_' + Math.random().toString(36).substr(2, 9);
+  document.getElementById('status').textContent = 'Requesting microphone...';
+
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    document.getElementById('micIndicator').classList.add('active');
+    document.getElementById('status').textContent = 'Microphone connected ✓';
+    connectWS();
+  } catch(e) {
+    document.getElementById('status').textContent = 'Mic permission denied';
+    alert('Allow microphone permission then refresh');
   }
+});
 
-  init() {
-    this.bindEvents();
-    this.updateNetworkStatus('Ready', 'ready');
-    this.log('Client initialized. ID: ' + this.userId);
-  }
+function connectWS() {
+  ws = new WebSocket(WS_URL);
 
-  bindEvents() {
-    document.getElementById('nameInput').addEventListener('keypress', e => {
-      if (e.key === 'Enter') this.joinSession();
-    });
-    window.addEventListener('online', () => this.handleNetworkChange(true));
-    window.addEventListener('offline', () => this.handleNetworkChange(false));
-  }
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'join', role: 'user', roomId, name: myName }));
+    document.getElementById('status').textContent = 'Connected to room ✓';
+  };
 
-  async joinSession() {
-    const name = document.getElementById('nameInput').value.trim();
-    const room = document.getElementById('roomInput').value.trim() || 'default';
-
-    if (!name) return this.showStatus('Please enter your full name', 'error');
-    if (name.length < 2) return this.showStatus('Name must be at least 2 characters', 'error');
-
-    this.roomId = room;
-    this.userName = name;
-    this.setLoading(true);
-    this.showStatus('Requesting microphone permission...', 'info');
-
-    try {
-      await this.connectWebSocket();
-      await this.setupMedia();
-      await this.createOffer();
-      this.setLoading(false);
-    } catch (err) {
-      this.handleError(err);
-      this.setLoading(false);
-    }
-  }
-
-  async connectWebSocket() {
-    return new Promise((resolve, reject) => {
-      const url = `${CONFIG.WS_URL}?room=${this.roomId}`;
-      this.ws = new WebSocket(url);
-
-      this.ws.onopen = () => {
-        this.log('Connected to signaling server');
-        this.updateNetworkStatus('Connected', 'success');
-        this.ws.send(JSON.stringify({
-          type: 'register',
-          role: 'user',
-          id: this.userId,
-          name: this.userName,
-          room: this.roomId
-        }));
-        this.reconnectAttempts = 0;
-        resolve();
-      };
-
-      this.ws.onmessage = e => {
-        try {
-          this.handleMessage(JSON.parse(e.data));
-        } catch(err) {
-          this.log('Parse error: ' + err.message);
-        }
-      };
-
-      this.ws.onclose = () => {
-        this.log('WebSocket connection closed');
-        this.updateNetworkStatus('Disconnected', 'error');
-        if (this.isConnected) this.attemptReconnect();
-      };
-
-      this.ws.onerror = () => {
-        reject(new Error('Cannot connect to server. Check WS_URL.'));
-      };
-
-      setTimeout(() => reject(new Error('Connection timeout after 10 seconds')), 10000);
-    });
-  }
-
-  async setupMedia() {
-    try {
-      this.showStatus('Accessing microphone...', 'info');
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000
-        },
-        video: false
-      });
-
-      this.log('Microphone access granted successfully');
-      document.getElementById('micIndicator').style.display = 'flex';
-      this.startAudioLevelMonitor();
-
-      this.pc = new RTCPeerConnection({iceServers: CONFIG.ICE_SERVERS});
-
-      this.localStream.getTracks().forEach(track => {
-        this.pc.addTrack(track, this.localStream);
-        this.log('Added audio track to peer connection');
-      });
-
-      this.pc.onicecandidate = e => {
-        if (e.candidate) {
-          this.send({to: 'all', type: 'ice', candidate: e.candidate, from: this.userId});
-        }
-      };
-
-      this.pc.onconnectionstatechange = () => {
-        this.log('Connection state changed: ' + this.pc.connectionState);
-        if (this.pc.connectionState === 'connected') {
-          this.isConnected = true;
-          this.showStatus('Connected! You can speak now.', 'success');
-          this.updateNetworkStatus('Live', 'success');
-        } else if (this.pc.connectionState === 'failed') {
-          this.handleError(new Error('Peer connection failed. Check your network.'));
-        } else if (this.pc.connectionState === 'disconnected') {
-          this.showStatus('Connection lost. Reconnecting...', 'info');
-        }
-      };
-
-    } catch (err) {
-      if (err.name === 'NotAllowedError') {
-        throw new Error('Microphone permission denied. Click the lock icon in browser and allow microphone access, then refresh.');
-      } else if (err.name === 'NotFoundError') {
-        throw new Error('No microphone detected. Please connect a microphone and refresh.');
-      } else if (err.name === 'NotReadableError') {
-        throw new Error('Microphone is being used by another app. Close other apps and try again.');
-      }
-      throw err;
-    }
-  }
-
-  async createOffer() {
-    const offer = await this.pc.createOffer({
-      offerToReceiveAudio: false,
-      offerToReceiveVideo: false
-    });
-    await this.pc.setLocalDescription(offer);
-    this.send({
-      to: 'all',
-      type: 'offer',
-      sdp: offer,
-      from: this.userId,
-      name: this.userName
-    });
-    this.log('Offer sent to host and monitor');
-  }
-
-  handleMessage(data) {
-    this.log('Message received: ' + data.type);
-
-    if (data.type === 'answer' && data.to === this.userId) {
-      this.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-      this.log('Answer applied successfully');
-    }
-
-    if (data.type === 'ice' && data.to === this.userId) {
-      this.pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-    }
-
-    if (data.type === 'host-left') {
-      this.showStatus('Host has left the session. Waiting for host to return...', 'error');
-      this.isConnected = false;
-    }
-
-    if (data.type === 'end-session') {
-      this.showStatus('Session ended by host', 'error');
-      setTimeout(() => location.reload(), 2000);
-    }
-  }
-
-  send(msg) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(msg));
-    } else {
-      this.log('Warning: Cannot send message, socket not open');
-    }
-  }
-
-  startAudioLevelMonitor() {
-    const audioContext = new AudioContext();
-    const source = audioContext.createMediaStreamSource(this.localStream);
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
-    source.connect(analyser);
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-    const checkLevel = () => {
-      analyser.getByteFrequencyData(dataArray);
-      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-      const indicator = document.getElementById('micIndicator');
-      const scale = 1 + (average / 255) * 0.5;
-      indicator.style.transform = `scale(${scale})`;
-      if (this.localStream && this.localStream.active) {
-        requestAnimationFrame(checkLevel);
-      }
-    };
-    checkLevel();
-  }
-
-  async attemptReconnect() {
-    if (this.reconnectAttempts >= CONFIG.MAX_RECONNECT) {
-      this.showStatus('Maximum reconnection attempts reached. Please refresh the page.', 'error');
-      return;
-    }
-
-    this.reconnectAttempts++;
-    this.showStatus(`Reconnecting... Attempt ${this.reconnectAttempts} of ${CONFIG.MAX_RECONNECT}`, 'info');
-    this.log('Starting reconnection attempt ' + this.reconnectAttempts);
-
-    setTimeout(async () => {
-      try {
-        await this.connectWebSocket();
-        if (this.pc) await this.createOffer();
-        this.showStatus('Reconnected successfully!', 'success');
-      } catch (err) {
-        this.log('Reconnect failed: ' + err.message);
-        this.attemptReconnect();
-      }
-    }, CONFIG.RECONNECT_DELAY);
-  }
-
-  handleError(err) {
-    console.error('UserClient Error:', err);
-    this.log('ERROR: ' + err.message);
-    this.showStatus(err.message, 'error');
-    this.updateNetworkStatus('Error', 'error');
-  }
-
-  showStatus(msg, type) {
-    const box = document.getElementById('statusBox');
-    box.className = 'status show ' + type;
-    box.textContent = msg;
-  }
-
-  updateNetworkStatus(msg, type) {
-    const el = document.getElementById('networkStatus');
-    el.textContent = '● ' + msg;
-    el.style.background = type === 'success'? 'rgba(0,255,0,0.3)' :
-                          type === 'error'? 'rgba(255,0,0,0.3)' : 'rgba(0,0,0,0.5)';
-  }
-
-  log(msg) {
-    const logBox = document.getElementById('logBox');
-    const entry = document.createElement('div');
-    entry.className = 'log-entry';
-    entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-    logBox.appendChild(entry);
-    logBox.scrollTop = logBox.scrollHeight;
-  }
-
-  setLoading(loading) {
-    const btn = document.getElementById('joinBtn');
-    btn.disabled = loading;
-    btn.textContent = loading? 'Connecting...' : 'Connect Microphone';
-  }
-
-  handleNetworkChange(online) {
-    this.updateNetworkStatus(online? 'Online' : 'Offline', online? 'ready' : 'error');
-    if (!online) {
-      this.showStatus('Network connection lost. Will reconnect automatically when online.', 'error');
-    } else {
-      this.log('Network connection restored');
-    }
-  }
-
-  testMic() {
-    if (!this.localStream) {
-      alert('Please connect microphone first');
-      return;
-    }
-    alert('Microphone test: Speak now. The mic icon should pulse with your voice.');
-  }
-
-  showHelp() {
-    alert('Help:\n1. Allow microphone permission\n2. Enter your name\n3. Click Connect\nIf issues: Refresh page or check internet connection.');
-  }
-
-  clearLog() {
-    document.getElementById('logBox').innerHTML = '';
-  }
+  ws.onmessage = async (e) => {
+    const data = JSON.parse(e.data);
+    if(data.type === 'offer') await handleOffer(data);
+    if(data.type === 'ice-candidate') await pc.addIceCandidate(data.candidate);
+  };
 }
 
-const client = new UserClient();
+async function handleOffer(data) {
+  pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-function joinSession() { client.joinSession(); }
-function toggleMenu() { document.getElementById('menuPanel').classList.toggle('show'); }
-function testMic() { client.testMic(); }
-function showHelp() { client.showHelp(); }
-function clearLog() { client.clearLog(); }
+  pc.onicecandidate = (e) => {
+    if(e.candidate) ws.send(JSON.stringify({ type: 'ice-candidate', target: data.from, candidate: e.candidate }));
+  };
+
+  await pc.setRemoteDescription(data.offer);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  ws.send(JSON.stringify({ type: 'answer', target: data.from, answer }));
+}
 </script>
 </body>
 </html>
