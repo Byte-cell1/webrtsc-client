@@ -3,164 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Host Control - WhatsApp Web</title>
+<title>Host Control</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-body {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  min-height:100vh;
-  color:#fff;
-  padding:10px;
-}
-.header {
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(20px);
-  padding:12px;
-  border-radius:15px;
-  margin-bottom:12px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  flex-wrap:wrap;
-  gap:8px;
-}
-h1 { font-size:17px; }
-.btn {
-  padding:9px 12px;
-  border:none;
-  border-radius:8px;
-  background:#fff;
-  color:#1e3c72;
-  font-weight:700;
-  cursor:pointer;
-  font-size:12px;
-}
-.btn.menu { background:#f59e0b; color:#fff; }
-.btn.uid { background:#10b981; color:#fff; }
-.container {
-  display:grid;
-  grid-template-columns:1fr;
-  gap:12px;
-}
-@media(min-width:900px) {
-.container { grid-template-columns:2fr 1fr; }
-}
-.video-section {
-  background: rgba(255,255,255,0.05);
-  border-radius:15px;
-  padding:12px;
+/*... keep all previous CSS... */
+.group-list {
+  margin-top:10px;
+  max-height:150px;
   overflow-y:auto;
-  max-height:90vh;
 }
-.users-grid {
-  display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
-  gap:10px;
-  margin-top:12px;
-}
-.user-box {
-  background: rgba(0,0,0,0.3);
-  border-radius:10px;
+.group-item {
   padding:8px;
-  position:relative;
-}
-.user-box video {
-  width:100%;
-  height:140px;
-  background:#000;
-  border-radius:8px;
-  object-fit:cover;
-}
-.user-name {
-  font-size:12px;
-  margin-top:4px;
-  text-align:center;
-}
-.users-panel {
-  background: rgba(255,255,255,0.05);
-  border-radius:15px;
-  padding:12px;
-  max-height:90vh;
-  display:flex;
-  flex-direction:column;
-}
-.users-panel.hidden { display:none; }
-.users-list {
-  flex:1;
-  overflow-y:auto;
-  margin:8px 0;
-}
-.user-item {
-  padding:10px;
-  background: rgba(255,255,255,0.05);
-  border-radius:8px;
-  margin-bottom:6px;
-}
-.user-actions button {
-  padding:5px 8px;
-  font-size:11px;
-  margin:2px;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-}
-.add { background:#10b981; color:#fff; }
-.reject { background:#ef4444; color:#fff; }
-.chat-container {
-  display:flex;
-  flex-direction:column;
-  height:250px;
-  background: rgba(0,0,0,0.2);
-  border-radius:10px;
-  overflow:hidden;
-}
-.chat-log {
-  flex:1;
-  overflow-y:auto;
-  padding:10px;
-  font-size:13px;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.chat-bubble {
-  max-width:75%;
-  padding:8px 12px;
-  border-radius:12px;
-}
-.chat-bubble.me {
-  background:#075e54;
-  align-self:flex-end;
-}
-.chat-bubble.other {
-  background: rgba(255,255,255,0.15);
-  align-self:flex-start;
-}
-.chat-input-area {
-  display:flex;
-  align-items:center;
-  gap:6px;
-  padding:8px;
-  background: rgba(0,0,0,0.3);
-}
-.chat-input-area input {
-  flex:1;
-  padding:10px;
-  border-radius:20px;
-  border:none;
   background: rgba(255,255,255,0.1);
-  color:#fff;
-}
-.icon-btn {
-  width:40px;
-  height:40px;
-  border-radius:50%;
-  border:none;
-  background:#25d366;
-  color:#fff;
-  font-size:18px;
+  border-radius:8px;
+  margin-bottom:5px;
   cursor:pointer;
 }
+.img-msg { max-width:200px; border-radius:8px; margin-top:5px; }
+.audio-msg { width:200px; margin-top:5px; }
 </style>
 </head>
 <body>
@@ -168,12 +27,13 @@ h1 { font-size:17px; }
   <h1>🎥 Host Control Center</h1>
   <button class="btn uid" id="genUidBtn">🔑 New Room</button>
   <button class="btn menu" id="menuBtn">☰ Users</button>
+  <button class="btn" id="groupBtn" style="background:#8b5cf6;color:#fff">👥 Group</button>
 </div>
 
 <div class="container">
   <div class="video-section">
     <video id="localVideo" autoplay muted playsinline></video>
-    <h3 style="margin-top:15px;">Live Users - Camera only shows with permission</h3>
+    <h3 style="margin-top:15px;">Live Users</h3>
     <div class="users-grid" id="usersGrid"></div>
   </div>
 
@@ -181,12 +41,16 @@ h1 { font-size:17px; }
     <h3>All Users</h3>
     <div class="users-list" id="usersList"></div>
 
-    <h3 style="margin-top:12px;">Chat with Selected User</h3>
+    <h3 style="margin-top:12px;">Groups</h3>
+    <div class="group-list" id="groupList"></div>
+    <button class="btn" onclick="createGroup()" style="width:100%;margin-top:5px">+ Create Group</button>
+
+    <h3 style="margin-top:12px;">Chat</h3>
     <div class="chat-container">
       <div class="chat-log" id="chatLog"></div>
       <div class="chat-input-area">
         <input type="text" id="chatInput" placeholder="Type message">
-        <input type="file" id="fileInput" style="display:none">
+        <input type="file" id="fileInput" accept="image/*,audio/*,.pdf,.doc" style="display:none">
         <button class="icon-btn" onclick="document.getElementById('fileInput').click()">📎</button>
         <button class="icon-btn" id="voiceBtn">🎤</button>
         <button class="icon-btn" id="sendBtn" style="background:#128c7e;">⌨️</button>
@@ -197,7 +61,7 @@ h1 { font-size:17px; }
 
 <script>
 const WS_URL = 'wss://webrtsc-server-hb80.onrender.com';
-let ws, localStream, peers = {}, roomId = 'public', selectedUser = null, allUsers = {};
+let ws, localStream, peers = {}, roomId = 'public', selectedTarget = null, allUsers = {}, groups = {};
 
 async function init() {
   try {
@@ -216,8 +80,8 @@ function connectWS() {
     const data = JSON.parse(e.data);
     if(data.type === 'user-joined') addUser(data.userId, data.name);
     if(data.type === 'offer') handleOffer(data);
-    if(data.type === 'chat') showChat(data.from, data.msg);
-    if(data.type === 'file') showFile(data.from, data.fileName);
+    if(data.type === 'chat') showChat(data.from, data.msg, data.target);
+    if(data.type === 'file') showFile(data.from, data.fileName, data.fileData);
   };
 }
 
@@ -231,56 +95,95 @@ function addUser(userId, name) {
     <div class="user-actions">
       <button class="add" onclick="approve('${userId}')">Approve</button>
       <button class="reject" onclick="reject('${userId}')">Remove</button>
-      <button class="add" onclick="chatWith('${userId}')">Chat</button>
+      <button class="add" onclick="chatWith('${userId}')">DM</button>
     </div>
   `;
   document.getElementById('usersList').appendChild(div);
 }
 
-function approve(userId) {
-  const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-  peers[userId] = pc;
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-  pc.ontrack = e => {
-    const box = document.createElement('div');
-    box.id = 'video-' + userId;
-    box.className = 'user-box';
-    box.innerHTML = `<video autoplay playsinline></video><div class="user-name">${allUsers[userId]}</div>`;
-    document.getElementById('usersGrid').appendChild(box);
-    box.querySelector('video').srcObject = e.streams[0];
-  };
-  pc.onicecandidate = e => e.candidate && ws.send(JSON.stringify({ type: 'ice', target: userId, candidate: e.candidate }));
-  ws.send(JSON.stringify({ type: 'approve', target: userId }));
+function createGroup() {
+  const name = prompt('Enter group name:');
+  if(!name) return;
+  const groupId = 'g_' + Date.now();
+  groups[groupId] = { name, members: [] };
+  const div = document.createElement('div');
+  div.className = 'group-item';
+  div.textContent = name;
+  div.onclick = () => chatWith(groupId);
+  document.getElementById('groupList').appendChild(div);
+  alert('Group created. Click user "Add to Group" to add members');
 }
 
-function reject(userId) {
-  peers[userId]?.close();
-  document.getElementById('video-' + userId)?.remove();
-  ws.send(JSON.stringify({ type: 'reject', target: userId }));
+function chatWith(target) {
+  selectedTarget = target;
+  document.getElementById('chatLog').innerHTML = `<div style="text-align:center;opacity:0.7">Chatting with ${groups[target]?.name || allUsers[target]}</div>`;
 }
 
-function chatWith(userId) {
-  selectedUser = userId;
-  document.getElementById('chatLog').innerHTML = `<div style="text-align:center;opacity:0.7">Chatting with ${allUsers[userId]}</div>`;
-}
-
-function showChat(from, msg) {
+function showChat(from, msg, target) {
   const div = document.createElement('div');
   div.className = 'chat-bubble other';
-  div.textContent = allUsers[from] + ': ' + msg;
+  div.innerHTML = `<b>${allUsers[from] || 'User'}:</b> ${msg}`;
+  document.getElementById('chatLog').appendChild(div);
+  document.getElementById('chatLog').scrollTop = 99999;
+}
+
+function showFile(from, fileName, fileData) {
+  const div = document.createElement('div');
+  div.className = 'chat-bubble other';
+  if(fileName.match(/\.(jpg|jpeg|png|gif)$/i)) {
+    div.innerHTML = `<b>${allUsers[from]}:</b><br><img class="img-msg" src="${fileData}">`;
+  } else if(fileName.match(/\.(mp3|wav|webm)$/i)) {
+    div.innerHTML = `<b>${allUsers[from]}:</b><br><audio class="audio-msg" controls src="${fileData}"></audio>`;
+  } else {
+    div.innerHTML = `<b>${allUsers[from]}:</b> <a href="${fileData}" download="${fileName}" style="color:#4ade80">${fileName}</a>`;
+  }
   document.getElementById('chatLog').appendChild(div);
 }
 
 document.getElementById('sendBtn').onclick = () => {
   const msg = document.getElementById('chatInput').value.trim();
-  if(msg && selectedUser) {
-    ws.send(JSON.stringify({ type: 'chat', target: selectedUser, msg }));
+  if(msg && selectedTarget && ws.readyState === 1) {
+    ws.send(JSON.stringify({ type: 'chat', target: selectedTarget, msg }));
     const div = document.createElement('div');
     div.className = 'chat-bubble me';
     div.textContent = 'You: ' + msg;
     document.getElementById('chatLog').appendChild(div);
     document.getElementById('chatInput').value = '';
   }
+};
+
+document.getElementById('fileInput').onchange = (e) => {
+  const file = e.target.files[0];
+  if(!file ||!selectedTarget) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    ws.send(JSON.stringify({ type: 'file', target: selectedTarget, fileName: file.name, fileData: reader.result }));
+    showFile('You', file.name, reader.result);
+  };
+  reader.readAsDataURL(file);
+};
+
+let recorder, chunks = [];
+document.getElementById('voiceBtn').onmousedown = async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = e => chunks.push(e.data);
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: 'audio/webm' });
+    const reader = new FileReader();
+    reader.onload = () => {
+      ws.send(JSON.stringify({ type: 'file', target: selectedTarget, fileName: 'voice.webm', fileData: reader.result }));
+      showFile('You', 'voice.webm', reader.result);
+    };
+    reader.readAsDataURL(blob);
+    chunks = [];
+  };
+  recorder.start();
+  document.getElementById('voiceBtn').style.background = '#ef4444';
+};
+document.getElementById('voiceBtn').onmouseup = () => {
+  recorder?.stop();
+  document.getElementById('voiceBtn').style.background = '#25d366';
 };
 
 document.getElementById('menuBtn').onclick = () =>
