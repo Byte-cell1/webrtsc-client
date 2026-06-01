@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Host - WebRTC Meeting</title>
+<title>Host Control - WhatsApp Web</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
 body {
@@ -25,10 +25,6 @@ body {
   gap:8px;
 }
 h1 { font-size:17px; }
-.status { display:flex; gap:8px; align-items:center; font-size:12px; flex-wrap:wrap; }
-.dot { width:10px; height:10px; border-radius:50%; background:#666; }
-.dot.green { background:#4ade80; animation:pulse 2s infinite; }
-@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
 .btn {
   padding:9px 12px;
   border:none;
@@ -38,85 +34,77 @@ h1 { font-size:17px; }
   font-weight:700;
   cursor:pointer;
   font-size:12px;
-  transition:0.2s;
 }
-.btn:hover { transform:scale(1.05); }
 .btn.menu { background:#f59e0b; color:#fff; }
 .btn.uid { background:#10b981; color:#fff; }
-.btn.small { padding:5px 8px; font-size:11px; margin:2px; }
-.btn.add { background:#10b981; color:#fff; }
-.btn.reject { background:#ef4444; color:#fff; }
-.btn.remove { background:#f59e0b; color:#fff; }
 .container {
   display:grid;
   grid-template-columns:1fr;
   gap:12px;
 }
-@media(min-width:768px) {
+@media(min-width:900px) {
 .container { grid-template-columns:2fr 1fr; }
 }
 .video-section {
   background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(20px);
   border-radius:15px;
   padding:12px;
-  border:1px solid rgba(255,255,255,0.1);
-}
-#localVideo {
-  width:100%;
-  max-height:40vh;
-  background:#000;
-  border-radius:10px;
+  overflow-y:auto;
+  max-height:90vh;
 }
 .users-grid {
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));
-  gap:8px;
+  grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
+  gap:10px;
   margin-top:12px;
 }
 .user-box {
   background: rgba(0,0,0,0.3);
   border-radius:10px;
-  padding:6px;
+  padding:8px;
+  position:relative;
 }
 .user-box video {
   width:100%;
-  height:100px;
+  height:140px;
   background:#000;
   border-radius:8px;
   object-fit:cover;
 }
 .user-name {
-  font-size:11px;
+  font-size:12px;
   margin-top:4px;
   text-align:center;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
 }
 .users-panel {
   background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(20px);
   border-radius:15px;
   padding:12px;
-  border:1px solid rgba(255,255,255,0.1);
-  max-height:85vh;
+  max-height:90vh;
   display:flex;
   flex-direction:column;
 }
-.users-panel.hidden { display:none; }
 .users-list {
   flex:1;
   overflow-y:auto;
   margin:8px 0;
 }
 .user-item {
-  padding:8px;
+  padding:10px;
   background: rgba(255,255,255,0.05);
   border-radius:8px;
   margin-bottom:6px;
-  font-size:13px;
 }
+.user-actions button {
+  padding:5px 8px;
+  font-size:11px;
+  margin:2px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+.add { background:#10b981; color:#fff; }
+.reject { background:#ef4444; color:#fff; }
 .chat-container {
   display:flex;
   flex-direction:column;
@@ -138,17 +126,14 @@ h1 { font-size:17px; }
   max-width:75%;
   padding:8px 12px;
   border-radius:12px;
-  word-wrap:break-word;
 }
 .chat-bubble.me {
   background:#075e54;
   align-self:flex-end;
-  border-bottom-right-radius:4px;
 }
 .chat-bubble.other {
   background: rgba(255,255,255,0.15);
   align-self:flex-start;
-  border-bottom-left-radius:4px;
 }
 .chat-input-area {
   display:flex;
@@ -164,7 +149,6 @@ h1 { font-size:17px; }
   border:none;
   background: rgba(255,255,255,0.1);
   color:#fff;
-  font-size:14px;
 }
 .icon-btn {
   width:40px;
@@ -175,58 +159,34 @@ h1 { font-size:17px; }
   color:#fff;
   font-size:18px;
   cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-.icon-btn:active { transform:scale(0.9); }
-.log-box {
-  background: rgba(0,0,0,0.3);
-  border-radius:8px;
-  padding:8px;
-  font-size:11px;
-  height:80px;
-  overflow-y:auto;
-  margin-top:8px;
-}
-.uid-display {
-  background: rgba(16,185,129,0.2);
-  padding:6px 10px;
-  border-radius:8px;
-  font-weight:700;
-  font-size:14px;
-  letter-spacing:1px;
 }
 </style>
 </head>
 <body>
 <div class="header">
-  <h1>🎥 Host Dashboard</h1>
-  <div class="status">
-    <span class="dot" id="statusDot"></span>
-    <span id="statusText">Initializing...</span>
-    <span>Room: <span class="uid-display" id="roomId">public</span></span>
-  </div>
-  <button class="btn uid" id="genUidBtn">🔑 New UID</button>
-  <button class="btn menu" id="menuBtn">☰ Menu</button>
+  <h1>🎥 Host Control Center</h1>
+  <button class="btn uid" id="genUidBtn">🔑 New Room</button>
+  <button class="btn menu" id="menuBtn">☰ Users</button>
 </div>
 
 <div class="container">
   <div class="video-section">
     <video id="localVideo" autoplay muted playsinline></video>
+    <h3 style="margin-top:15px;">Live Users - Camera only shows with permission</h3>
     <div class="users-grid" id="usersGrid"></div>
-    <div class="log-box" id="logBox"></div>
   </div>
 
   <div class="users-panel hidden" id="usersPanel">
     <h3>All Users</h3>
     <div class="users-list" id="usersList"></div>
 
-    <h3 style="margin-top:12px;">Chat</h3>
+    <h3 style="margin-top:12px;">Chat with Selected User</h3>
     <div class="chat-container">
       <div class="chat-log" id="chatLog"></div>
       <div class="chat-input-area">
-        <input type="text" id="chatInput" placeholder="Type a message">
+        <input type="text" id="chatInput" placeholder="Type message">
+        <input type="file" id="fileInput" style="display:none">
+        <button class="icon-btn" onclick="document.getElementById('fileInput').click()">📎</button>
         <button class="icon-btn" id="voiceBtn">🎤</button>
         <button class="icon-btn" id="sendBtn" style="background:#128c7e;">⌨️</button>
       </div>
@@ -236,253 +196,99 @@ h1 { font-size:17px; }
 
 <script>
 const WS_URL = 'wss://webrtsc-server.onrender.com';
-let ws, localStream, peers = {}, roomId = 'public', allUsers = {};
-
-function log(msg) {
-  const box = document.getElementById('logBox');
-  box.innerHTML += `[${new Date().toLocaleTimeString()}] ${msg}<br>`;
-  box.scrollTop = box.scrollHeight;
-}
-
-function updateStatus(text, color) {
-  document.getElementById('statusText').textContent = text;
-  document.getElementById('statusDot').className = 'dot ' + color;
-}
-
-function generateUID() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let uid = '';
-  for(let i = 0; i < 6; i++) uid += chars.charAt(Math.floor(Math.random() * chars.length));
-  return uid;
-}
+let ws, localStream, peers = {}, roomId = 'public', selectedUser = null, allUsers = {};
 
 async function init() {
-  const params = new URLSearchParams(window.location.search);
-  roomId = params.get('room') || 'public';
-  document.getElementById('roomId').textContent = roomId;
-
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     document.getElementById('localVideo').srcObject = localStream;
-    updateStatus('Media ready', 'green');
-    log('Camera + mic access granted');
     connectWS();
-    loadChat();
   } catch(e) {
-    updateStatus('Camera error', 'red');
-    log('Error: ' + e.message);
-    alert('Allow camera + mic permission then refresh');
+    alert('Allow camera + mic permission');
   }
 }
 
 function connectWS() {
   ws = new WebSocket(WS_URL);
-
-  ws.onopen = () => {
-    log('WebSocket connected');
-    ws.send(JSON.stringify({ type: 'join', role: 'host', roomId }));
-    updateStatus('Connected', 'green');
-  };
-
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'join', role: 'host', roomId }));
   ws.onmessage = (e) => {
     const data = JSON.parse(e.data);
-    if(data.type === 'user-joined') handleUserJoined(data);
+    if(data.type === 'user-joined') addUser(data.userId, data.name);
     if(data.type === 'offer') handleOffer(data);
-    if(data.type === 'answer') handleAnswer(data);
-    if(data.type === 'ice-candidate') handleIce(data);
-    if(data.type === 'user-left') removeUser(data.userId);
-    if(data.type === 'chat') receiveChat(data);
-    if(data.type === 'voice') receiveVoice(data);
-  };
-
-  ws.onclose = () => {
-    updateStatus('Disconnected', 'red');
-    log('WebSocket closed');
+    if(data.type === 'chat') showChat(data.from, data.msg);
+    if(data.type === 'file') showFile(data.from, data.fileName);
   };
 }
 
-function handleUserJoined(data) {
-  allUsers[data.userId] = { name: data.name, room: data.roomId, status: 'pending' };
-  addUserToList(data.userId, data.name, data.roomId);
-  log(data.name + ' joined room ' + data.roomId);
-  saveUsers();
-}
-
-function addUserToList(userId, name, userRoom) {
+function addUser(userId, name) {
+  allUsers[userId] = name;
   const div = document.createElement('div');
-  div.id = 'list-' + userId;
+  div.id = 'user-item-' + userId;
   div.className = 'user-item';
   div.innerHTML = `
-    <div>${name} <small>[${userRoom}]</small></div>
-    <div>
-      <button class="btn small add" onclick="approveUser('${userId}')">Add</button>
-      <button class="btn small reject" onclick="rejectUser('${userId}')">Reject</button>
-      <button class="btn small remove" onclick="removeUser('${userId}')">Remove</button>
-      <button class="btn small add" onclick="restoreUser('${userId}')">Restore</button>
+    <div>${name}</div>
+    <div class="user-actions">
+      <button class="add" onclick="approve('${userId}')">Approve</button>
+      <button class="reject" onclick="reject('${userId}')">Remove</button>
+      <button class="add" onclick="chatWith('${userId}')">Chat</button>
     </div>
   `;
   document.getElementById('usersList').appendChild(div);
 }
 
-function approveUser(userId) {
-  allUsers[userId].status = 'approved';
-  createPeer(userId);
-  ws.send(JSON.stringify({ type: 'approve', target: userId }));
-  log(allUsers[userId].name + ' approved');
-}
-
-function rejectUser(userId) {
-  allUsers[userId].status = 'rejected';
-  ws.send(JSON.stringify({ type: 'reject', target: userId }));
-  log(allUsers[userId].name + ' rejected');
-}
-
-function createPeer(userId) {
-  if(peers[userId]) return;
+function approve(userId) {
   const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-  peers[userId] = { pc, name: allUsers[userId].name };
-
-  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-  pc.ontrack = (e) => {
-    let box = document.getElementById('user-' + userId);
-    if(!box) {
-      box = document.createElement('div');
-      box.id = 'user-' + userId;
-      box.className = 'user-box';
-      box.innerHTML = `<video autoplay playsinline></video><div class="user-name">${allUsers[userId].name}</div>`;
-      document.getElementById('usersGrid').appendChild(box);
-    }
+  peers[userId] = pc;
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  pc.ontrack = e => {
+    const box = document.createElement('div');
+    box.id = 'video-' + userId;
+    box.className = 'user-box';
+    box.innerHTML = `<video autoplay playsinline></video><div class="user-name">${allUsers[userId]}</div>`;
+    document.getElementById('usersGrid').appendChild(box);
     box.querySelector('video').srcObject = e.streams[0];
   };
-
-  pc.onicecandidate = (e) => {
-    if(e.candidate) ws.send(JSON.stringify({ type: 'ice-candidate', target: userId, candidate: e.candidate }));
-  };
+  pc.onicecandidate = e => e.candidate && ws.send(JSON.stringify({ type: 'ice', target: userId, candidate: e.candidate }));
+  ws.send(JSON.stringify({ type: 'approve', target: userId }));
 }
 
-async function handleOffer(data) {
-  const peer = peers[data.from];
-  if(!peer) return;
-  await peer.pc.setRemoteDescription(data.offer);
-  const answer = await peer.pc.createAnswer();
-  await peer.pc.setLocalDescription(answer);
-  ws.send(JSON.stringify({ type: 'answer', target: data.from, answer }));
+function reject(userId) {
+  peers[userId]?.close();
+  document.getElementById('video-' + userId)?.remove();
+  ws.send(JSON.stringify({ type: 'reject', target: userId }));
 }
 
-async function handleAnswer(data) {
-  const peer = peers[data.from];
-  if(peer) await peer.pc.setRemoteDescription(data.answer);
+function chatWith(userId) {
+  selectedUser = userId;
+  document.getElementById('chatLog').innerHTML = `<div style="text-align:center;opacity:0.7">Chatting with ${allUsers[userId]}</div>`;
 }
 
-async function handleIce(data) {
-  const peer = peers[data.from];
-  if(peer) await peer.pc.addIceCandidate(data.candidate);
-}
-
-function removeUser(userId) {
-  if(peers[userId]) {
-    peers[userId].pc.close();
-    delete peers[userId];
-  }
-  document.getElementById('user-' + userId)?.remove();
-  if(allUsers[userId]) allUsers[userId].status = 'removed';
-  log('User removed');
-}
-
-function restoreUser(userId) {
-  if(allUsers[userId]) {
-    allUsers[userId].status = 'approved';
-    createPeer(userId);
-    ws.send(JSON.stringify({ type: 'approve', target: userId }));
-    log(allUsers[userId].name + ' restored');
-  }
-}
-
-function receiveChat(data) {
-  addChatBubble(data.name, data.msg, 'other');
-  saveChat(data.name, data.msg, 'other');
-}
-
-function receiveVoice(data) {
-  addChatBubble(data.name, '🎤 Voice note', 'other');
-  saveChat(data.name, '[Voice]', 'other');
-}
-
-function addChatBubble(name, msg, type) {
+function showChat(from, msg) {
   const div = document.createElement('div');
-  div.className = 'chat-bubble ' + type;
-  div.innerHTML = `<b>${name}:</b> ${msg}`;
+  div.className = 'chat-bubble other';
+  div.textContent = allUsers[from] + ': ' + msg;
   document.getElementById('chatLog').appendChild(div);
-  document.getElementById('chatLog').scrollTop = 99999;
 }
 
-function saveChat(name, msg, type) {
-  const chats = JSON.parse(localStorage.getItem('hostChat') || '[]');
-  chats.push({ name, msg, type, time: Date.now() });
-  localStorage.setItem('hostChat', JSON.stringify(chats));
-}
+document.getElementById('sendBtn').onclick = () => {
+  const msg = document.getElementById('chatInput').value.trim();
+  if(msg && selectedUser) {
+    ws.send(JSON.stringify({ type: 'chat', target: selectedUser, msg }));
+    const div = document.createElement('div');
+    div.className = 'chat-bubble me';
+    div.textContent = 'You: ' + msg;
+    document.getElementById('chatLog').appendChild(div);
+    document.getElementById('chatInput').value = '';
+  }
+};
 
-function loadChat() {
-  const chats = JSON.parse(localStorage.getItem('hostChat') || '[]');
-  chats.forEach(c => addChatBubble(c.name, c.msg, c.type));
-}
-
-function saveUsers() {
-  localStorage.setItem('allUsers', JSON.stringify(allUsers));
-}
-
-// Button events
-document.getElementById('menuBtn').addEventListener('click', () => {
+document.getElementById('menuBtn').onclick = () =>
   document.getElementById('usersPanel').classList.toggle('hidden');
-});
 
-document.getElementById('genUidBtn').addEventListener('click', () => {
-  const newUid = generateUID();
-  roomId = newUid;
-  document.getElementById('roomId').textContent = newUid;
-  ws.send(JSON.stringify({ type: 'change-room', newRoomId: newUid }));
-  log('New Room UID: ' + newUid);
-  alert('Room UID: ' + newUid);
-});
-
-document.getElementById('sendBtn').addEventListener('click', sendChat);
-document.getElementById('chatInput').addEventListener('keypress', (e) => {
-  if(e.key === 'Enter') sendChat();
-});
-
-function sendChat() {
-  const input = document.getElementById('chatInput');
-  const msg = input.value.trim();
-  if(msg && ws.readyState === 1) {
-    ws.send(JSON.stringify({ type: 'chat', roomId, msg, name: 'Host' }));
-    addChatBubble('Host', msg, 'me');
-    saveChat('Host', msg, 'me');
-    input.value = '';
-  }
-}
-
-let mediaRecorder, audioChunks = [];
-document.getElementById('voiceBtn').addEventListener('click', async () => {
-  if(!mediaRecorder || mediaRecorder.state === 'inactive') {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(audioChunks, { type: 'audio/webm' });
-      audioChunks = [];
-      ws.send(JSON.stringify({ type: 'voice', roomId, name: 'Host' }));
-      addChatBubble('Host', '🎤 Voice note', 'me');
-      saveChat('Host', '[Voice]', 'me');
-      stream.getTracks().forEach(t => t.stop());
-    };
-    mediaRecorder.start();
-    document.getElementById('voiceBtn').style.background = '#ef4444';
-  } else {
-    mediaRecorder.stop();
-    document.getElementById('voiceBtn').style.background = '#25d366';
-  }
-});
+document.getElementById('genUidBtn').onclick = () => {
+  roomId = Math.random().toString(36).substring(2,8).toUpperCase();
+  alert('Room Code: ' + roomId);
+};
 
 init();
 </script>
