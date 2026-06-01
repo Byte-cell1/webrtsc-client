@@ -2,96 +2,126 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Monitor View</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor - WebRTC Meeting</title>
 <style>
-/*... 180 lines CSS: CCTV grid, no controls, status bar... */
-body { margin:0; background:#000; color:#0f0; font-family:'Courier New',monospace; }
-.status-bar { height:40px; background:#111; display:flex; align-items:center; padding:0 20px; border-bottom:2px solid #0f0; }
-.grid { display:grid; grid-template-columns:1fr 1fr; height:calc(100vh - 40px); gap:5px; padding:5px; }
-.video-box { background:#000; border:2px solid #333; position:relative; }
-video { width:100%; height:100%; object-fit:contain; }
-.label { position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.7); padding:5px 10px; font-size:14px; }
-.timestamp { position:absolute; bottom:10px; right:10px; font-size:12px; }
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
+body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  min-height:100vh;
+  color:#fff;
+  padding:15px;
+}
+.header {
+  background: rgba(255,255,255,0.05);
+  padding:15px;
+  border-radius:12px;
+  margin-bottom:15px;
+  text-align:center;
+}
+h1 { font-size:22px; margin-bottom:5px; }
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+  gap:15px;
+}
+.video-box {
+  background: rgba(255,255,255,0.05);
+  border-radius:12px;
+  padding:10px;
+  border:1px solid rgba(255,255,255,0.1);
+}
+.video-box video {
+  width:100%;
+  height:200px;
+  background:#000;
+  border-radius:8px;
+  object-fit:cover;
+}
+.name {
+  text-align:center;
+  margin-top:8px;
+  font-size:14px;
+  font-weight:600;
+}
+.status {
+  text-align:center;
+  padding:40px;
+  font-size:18px;
+  opacity:0.7;
+}
 </style>
 </head>
 <body>
-<div class="status-bar">
-  MONITOR MODE - Room: <span id="room">default</span> | <span id="status">Connecting...</span>
+<div class="header">
+  <h1>📺 Monitor View</h1>
+  <div>Room: <b id="roomId">default</b></div>
 </div>
-<div class="grid">
-  <div class="video-box">
-    <video id="hostView" autoplay playsinline></video>
-    <div class="label">HOST CAMERA</div>
-    <div class="timestamp" id="time1"></div>
-  </div>
-  <div class="video-box">
-    <video id="userView" autoplay playsinline></video>
-    <div class="label">USER AUDIO+VIDEO</div>
-    <div class="timestamp" id="time2"></div>
-  </div>
-</div>
+
+<div id="status" class="status">Waiting for streams...</div>
+<div class="grid" id="videoGrid"></div>
 
 <script>
-/*... 480 lines JS: Dual PC setup, auto-reconnect, timestamp, no UI controls... */
-class MonitorClient {
-  constructor() {
-    this.ws = null;
-    this.hostPC = null;
-    this.userPC = null;
-    this.roomId = new URLSearchParams(location.search).get('room') || 'default';
-    document.getElementById('room').textContent = this.roomId;
-    this.startClock();
-    this.connect();
-  }
+const WS_URL = 'wss://webrtsc-server.onrender.com';
+let ws, peers = {}, roomId;
 
-  connect() {
-    this.ws = new WebSocket('wss://webrtsc-server.onrender.com';?room=${this.roomId}`);
-    this.ws.onopen = () => {
-      this.ws.send(JSON.stringify({type:'register', role:'monitor', id:'monitor'}));
-      document.getElementById('status').textContent = 'Connected - Monitoring';
-    };
-    this.ws.onmessage = e => this.handleMsg(JSON.parse(e.data));
-    this.ws.onclose = () => {
-      document.getElementById('status').textContent = 'Disconnected - Retrying...';
-      setTimeout(() => this.connect(), 3000);
-    };
-  }
+const params = new URLSearchParams(window.location.search);
+roomId = params.get('room') || 'default';
+document.getElementById('roomId').textContent = roomId;
 
-  async handleMsg(data) {
-    if (data.type === 'offer') {
-      const isHost = data.from === 'host';
-      const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-      const videoEl = isHost? document.getElementById('hostView') : document.getElementById('userView');
+ws = new WebSocket(WS_URL);
 
-      pc.ontrack = e => videoEl.srcObject = e.streams[0];
-      pc.onicecandidate = e => {
-        if (e.candidate) this.ws.send(JSON.stringify({to:data.from, type:'ice', candidate:e.candidate, from:'monitor'}));
-      };
+ws.onopen = () => {
+  ws.send(JSON.stringify({ type: 'join', role: 'monitor', roomId }));
+};
 
-      if (isHost) this.hostPC = pc; else this.userPC = pc;
+ws.onmessage = (e) => {
+  const data = JSON.parse(e.data);
+  if(data.type === 'user-joined') createVideoBox(data.userId, data.name);
+  if(data.type === 'offer') handleOffer(data);
+  if(data.type === 'ice-candidate') handleIce(data);
+  if(data.type === 'user-left') removeVideo(data.userId);
+};
 
-      await pc.setRemoteDescription(data.sdp);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      this.ws.send(JSON.stringify({to:data.from, type:'answer', sdp:answer, to:data.from}));
-    }
+function createVideoBox(userId, name) {
+  document.getElementById('status').style.display = 'none';
+  const box = document.createElement('div');
+  box.id = 'box-' + userId;
+  box.className = 'video-box';
+  box.innerHTML = `<video autoplay playsinline></video><div class="name">${name}</div>`;
+  document.getElementById('videoGrid').appendChild(box);
 
-    if (data.type === 'ice') {
-      const pc = data.from === 'host'? this.hostPC : this.userPC;
-      if (pc) await pc.addIceCandidate(data.candidate);
-    }
-  }
+  const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+  peers[userId] = pc;
 
-  startClock() {
-    setInterval(() => {
-      const now = new Date().toLocaleTimeString();
-      document.getElementById('time1').textContent = now;
-      document.getElementById('time2').textContent = now;
-    }, 1000);
-  }
+  pc.ontrack = (e) => {
+    box.querySelector('video').srcObject = e.streams[0];
+  };
+
+  pc.onicecandidate = (e) => {
+    if(e.candidate) ws.send(JSON.stringify({ type: 'ice-candidate', target: data.from, candidate: e.candidate }));
+  };
 }
 
-new MonitorClient();
+async function handleOffer(data) {
+  const pc = peers[data.from];
+  if(!pc) return;
+  await pc.setRemoteDescription(data.offer);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  ws.send(JSON.stringify({ type: 'answer', target: data.from, answer }));
+}
+
+async function handleIce(data) {
+  const pc = peers[data.from];
+  if(pc) await pc.addIceCandidate(data.candidate);
+}
+
+function removeVideo(userId) {
+  document.getElementById('box-' + userId)?.remove();
+  peers[userId]?.close();
+  delete peers[userId];
+}
 </script>
 </body>
 </html>
