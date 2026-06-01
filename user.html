@@ -12,23 +12,23 @@ body {
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:20px;
+  padding:15px;
   color:#fff;
 }
 .container {
   background: rgba(255,255,255,0.1);
   backdrop-filter: blur(20px);
-  padding:30px 20px;
+  padding:25px 20px;
   border-radius:20px;
-  max-width:400px;
+  max-width:420px;
   width:100%;
   border:1px solid rgba(255,255,255,0.2);
 }
-h2 { text-align:center; margin-bottom:20px; font-size:24px; }
+h2 { text-align:center; margin-bottom:20px; font-size:22px; }
 input {
   width:100%;
   padding:14px;
-  margin-bottom:15px;
+  margin-bottom:12px;
   border-radius:10px;
   border:2px solid rgba(255,255,255,0.3);
   background: rgba(0,0,0,0.2);
@@ -43,28 +43,30 @@ input::placeholder { color:rgba(255,255,255,0.6); }
   border-radius:10px;
   background:#fff;
   color:#667eea;
-  font-size:18px;
+  font-size:17px;
   font-weight:700;
   cursor:pointer;
   transition:0.2s;
+  margin-bottom:10px;
 }
 .btn:active { transform:scale(0.98); }
+.btn.chat { background:#10b981; color:#fff; }
 .status {
   text-align:center;
-  margin-top:15px;
+  margin:10px 0;
   font-size:14px;
   opacity:0.9;
 }
 #micIndicator {
-  width:80px;
-  height:80px;
+  width:70px;
+  height:70px;
   border-radius:50%;
   background: rgba(255,255,255,0.2);
-  margin:20px auto;
+  margin:15px auto;
   display:none;
   align-items:center;
   justify-content:center;
-  font-size:40px;
+  font-size:35px;
 }
 #micIndicator.active {
   display:flex;
@@ -72,37 +74,85 @@ input::placeholder { color:rgba(255,255,255,0.6); }
   background:#4ade80;
 }
 @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.1); } }
+.chat-section {
+  display:none;
+  margin-top:20px;
+}
+.chat-section.show { display:block; }
+.chat-log {
+  height:200px;
+  overflow-y:auto;
+  background: rgba(0,0,0,0.2);
+  border-radius:10px;
+  padding:12px;
+  font-size:14px;
+  margin-bottom:10px;
+}
+.chat-msg { margin-bottom:8px; word-wrap:break-word; }
+.chat-input-box {
+  display:flex;
+  gap:8px;
+}
+.chat-input-box input {
+  flex:1;
+  margin-bottom:0;
+}
+.room-info {
+  text-align:center;
+  background: rgba(16,185,129,0.2);
+  padding:8px;
+  border-radius:8px;
+  margin-bottom:15px;
+  font-weight:700;
+}
 </style>
 </head>
 <body>
 <div class="container">
   <h2>🎤 Join Meeting</h2>
+
+  <div class="room-info" id="roomInfo">Room: public</div>
+
   <input type="text" id="nameInput" placeholder="Enter your full name">
-  <input type="text" id="roomInput" placeholder="Room ID" value="default">
+  <input type="text" id="uidInput" placeholder="Enter Room UID - leave empty for public">
+
   <button class="btn" id="connectBtn">Connect Microphone</button>
+
   <div id="micIndicator">🎤</div>
-  <div class="status" id="status">Enter name + room, then connect</div>
+  <div class="status" id="status">Enter name, then connect</div>
+
+  <div class="chat-section" id="chatSection">
+    <h3 style="margin-bottom:10px;">💬 Chat</h3>
+    <div class="chat-log" id="chatLog"></div>
+    <div class="chat-input-box">
+      <input type="text" id="chatInput" placeholder="Type message...">
+      <button class="btn chat" id="sendBtn">Send</button>
+    </div>
+  </div>
 </div>
 
 <script>
 const WS_URL = 'wss://webrtsc-server.onrender.com';
-let ws, localStream, pc, roomId, myName;
+let ws, localStream, pc, roomId = 'public', myName;
 
 document.getElementById('connectBtn').addEventListener('click', async () => {
   myName = document.getElementById('nameInput').value.trim();
-  roomId = document.getElementById('roomInput').value.trim() || 'default';
+  const uid = document.getElementById('uidInput').value.trim();
+  roomId = uid || 'public';
 
   if(myName.length < 2) {
     alert('Please enter your full name');
     return;
   }
 
+  document.getElementById('roomInfo').textContent = 'Room: ' + roomId;
   document.getElementById('status').textContent = 'Requesting microphone...';
 
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     document.getElementById('micIndicator').classList.add('active');
     document.getElementById('status').textContent = 'Microphone connected ✓';
+    document.getElementById('chatSection').classList.add('show');
     connectWS();
   } catch(e) {
     document.getElementById('status').textContent = 'Mic permission denied';
@@ -115,13 +165,14 @@ function connectWS() {
 
   ws.onopen = () => {
     ws.send(JSON.stringify({ type: 'join', role: 'user', roomId, name: myName }));
-    document.getElementById('status').textContent = 'Connected to room ✓';
+    document.getElementById('status').textContent = 'Connected to room: ' + roomId + ' ✓';
   };
 
   ws.onmessage = async (e) => {
     const data = JSON.parse(e.data);
     if(data.type === 'offer') await handleOffer(data);
     if(data.type === 'ice-candidate') await pc.addIceCandidate(data.candidate);
+    if(data.type === 'chat') addChatMsg(data.name, data.msg);
   };
 }
 
@@ -137,6 +188,29 @@ async function handleOffer(data) {
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
   ws.send(JSON.stringify({ type: 'answer', target: data.from, answer }));
+}
+
+function addChatMsg(name, msg) {
+  const div = document.createElement('div');
+  div.className = 'chat-msg';
+  div.innerHTML = `<b>${name}:</b> ${msg}`;
+  document.getElementById('chatLog').appendChild(div);
+  document.getElementById('chatLog').scrollTop = 9999;
+}
+
+document.getElementById('sendBtn').addEventListener('click', sendChat);
+document.getElementById('chatInput').addEventListener('keypress', (e) => {
+  if(e.key === 'Enter') sendChat();
+});
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if(msg && ws.readyState === 1) {
+    ws.send(JSON.stringify({ type: 'chat', roomId, msg, name: myName }));
+    addChatMsg(myName, msg);
+    input.value = '';
+  }
 }
 </script>
 </body>
