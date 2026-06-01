@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Host Dashboard</title>
+<style>
+/* OLD BACKGROUND YOU LIKED */
+* { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', sans-serif; }
+body {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  min-height:100vh;
+  color:#fff;
+  overflow:hidden;
+}
+.header {
+  height:60px;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(10px);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+.header h1 { font-size:20px; }
+.menu-btn {
+  background: rgba(255,255,255,0.2);
+  border:none;
+  color:#fff;
+  padding:10px 15px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+  transition:0.3s;
+}
+.menu-btn:hover { background: rgba(255,255,255,0.3); }
+
+.main { display:flex; height:calc(100vh - 60px); }
+.video-grid {
+  flex:1;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+  padding:20px;
+}
+.video-card {
+  background: rgba(0,0,0,0.4);
+  border-radius:15px;
+  position:relative;
+  overflow:hidden;
+  border:2px solid rgba(255,255,255,0.1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+video { width:100%; height:100%; object-fit:cover; }
+.video-label {
+  position:absolute;
+  bottom:0;
+  left:0;
+  right:0;
+  padding:15px;
+  background:linear-gradient(transparent, rgba(0,0,0,0.8));
+  font-weight:600;
+}
+.stats { font-size:12px; opacity:0.7; margin-top:5px; }
+
+.sidebar {
+  width:280px;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(10px);
+  border-left:1px solid rgba(255,255,255,0.1);
+  padding:20px;
+  overflow-y:auto;
+  transform: translateX(0);
+  transition:0.3s;
+}
+.sidebar.hidden { transform: translateX(300px); }
+.sidebar h3 { margin-bottom:15px; }
+.user-item {
+  padding:12px;
+  background: rgba(255,255,255,0.1);
+  border-radius:10px;
+  margin-bottom:10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.status-dot { width:10px; height:10px; border-radius:50%; background:#4caf50; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+.controls {
+  position:fixed;
+  bottom:30px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:15px;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(20px);
+  padding:15px 25px;
+  border-radius:50px;
+  border:1px solid rgba(255,255,255,0.2);
+}
+.btn {
+  padding:14px 22px;
+  border:none;
+  border-radius:30px;
+  background: rgba(255,255,255,0.2);
+  color:#fff;
+  cursor:pointer;
+  font-weight:600;
+  font-size:16px;
+  transition:0.3s;
+}
+.btn:hover { background: rgba(255,255,255,0.3); transform:translateY(-2px); }
+.btn.danger { background: rgba(255,0,0,0.6); }
+
+.network-status {
+  position:fixed;
+  top:80px;
+  right:20px;
+  padding:8px 15px;
+  border-radius:20px;
+  background: rgba(0,0,0,0.5);
+  font-size:13px;
+}
+
+.log-box {
+  margin-top:20px;
+  max-height:200px;
+  overflow-y:auto;
+  font-size:11px;
+  opacity:0.6;
+  background: rgba(0,0,0,0.3);
+  padding:10px;
+  border-radius:8px;
+}
+.log-entry { padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+
+@media(max-width:900px) {
+ .video-grid { grid-template-columns:1fr; }
+ .sidebar { position:absolute; right:0; top:60px; height:calc(100vh - 60px); z-index:10; }
+}
+</style>
+</head>
+<body>
+<div class="network-status" id="networkStatus">● Connecting...</div>
+
+<div class="header">
+  <h1>Host Dashboard - Room: <span id="roomName">default</span></h1>
+  <button class="menu-btn" onclick="toggleMenu()">☰ Menu</button>
+</div>
+
+<div class="main">
+  <div class="video-grid">
+    <div class="video-card">
+      <video id="hostVideo" autoplay muted playsinline></video>
+      <div class="video-label">
+        <div>You - Host</div>
+        <div class="stats" id="hostStats">Initializing camera...</div>
+      </div>
+    </div>
+    <div class="video-card">
+      <video id="userVideo" autoplay playsinline></video>
+      <div class="video-label">
+        <div id="userName">Waiting for user...</div>
+        <div class="stats" id="userStats">No connection</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h3>Connected Users</h3>
+    <div id="userList">
+      <div style="opacity:0.5">No users yet</div>
+    </div>
+
+    <h3 style="margin-top:30px">System Log</h3>
+    <div class="log-box" id="logBox"></div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn" onclick="toggleMic()">🎤 Mute</button>
+  <button class="btn" onclick="toggleCam()">📹 Camera</button>
+  <button class="btn" onclick="startRecording()">⏺ Record</button>
+  <button class="btn danger" onclick="endSession()">End Session</button>
+</div>
+
+<script>
+/* ADVANCED CODE FROM LAST VERSION + ERROR HANDLING + RECONNECT */
+const CONFIG = {
+  WS_URL: 'wss://your-server.onrender.com', // CHANGE THIS
+  ICE_SERVERS: [
+    {urls: 'stun:stun.l.google.com:19302'},
+    {urls: 'stun:stun1.l.google.com:19302'}
+  ],
+  RECONNECT_DELAY: 3000,
+  MAX_RECONNECT: 5
+};
+
+class HostClient {
+  constructor() {
+    this.ws = null;
+    this.pc = null;
+    this.userPC = null;
+    this.localStream = null;
+    this.roomId = new URLSearchParams(location.search).get('room') || 'default';
+    this.users = new Map();
+    this.reconnectAttempts = 0;
+    this.recorder = null;
+    this.recordedChunks = [];
+    document.getElementById('roomName').textContent = this.roomId;
+    this.init();
+  }
+
+  async init() {
+    this.log('Host client starting...');
+    this.updateNetworkStatus('Connecting to server...', 'info');
+    await this.setupHostMedia();
+    this.connectWebSocket();
+  }
+
+  async setupHostMedia() {
+    try {
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        video: {width:1280, height:720, facingMode:'user'},
+        audio: {echoCancellation:true, noiseSuppression:true, sampleRate:48000}
+      });
+      document.getElementById('hostVideo').srcObject = this.localStream;
+      this.log('Camera and microphone access granted');
+      this.startStatsMonitor('hostStats', this.localStream);
+      this.updateNetworkStatus('Media ready', 'success');
+    } catch (err) {
+      this.handleError(err);
+      if (err.name === 'NotAllowedError') {
+        alert('Camera/Microphone permission denied. Please allow access and refresh.');
+      }
+    }
+  }
+
+  connectWebSocket() {
+    try {
+      const url = `${CONFIG.WS_URL}?room=${this.roomId}`;
+      this.ws = new WebSocket(url);
+
+      this.ws.onopen = () => {
+        this.log('WebSocket connected to server');
+        this.updateNetworkStatus('Connected', 'success');
+        this.ws.send(JSON.stringify({
+          type:'register',
+          role:'host',
+          id:'host',
+          room: this.roomId
+        }));
+        this.reconnectAttempts = 0;
+      };
+
+      this.ws.onmessage = e => {
+        try {
+          this.handleMessage(JSON.parse(e.data));
+        } catch(err) {
+          this.log('Error parsing message: ' + err.message);
+        }
+      };
+
+      this.ws.onclose = () => {
+        this.log('WebSocket disconnected');
+        this.updateNetworkStatus('Disconnected', 'error');
+        this.attemptReconnect();
+      };
+
+      this.ws.onerror = err => {
+        this.log('WebSocket error occurred');
+        this.updateNetworkStatus('Connection error', 'error');
+      };
+
+    } catch (err) {
+      this.handleError(err);
+    }
+  }
+
+  async handleMessage(data) {
+    this.log('Received: ' + data.type);
+
+    if (data.type === 'offer' && data.from!== 'host') {
+      await this.handleUserOffer(data);
+    }
+
+    if (data.type === 'ice' && data.from!== 'host') {
+      if (this.userPC) {
+        await this.userPC.addIceCandidate(new RTCIceCandidate(data.candidate));
+      }
+    }
+
+    if (data.type === 'user-joined') {
+      this.addUserToList(data.userId, data.name || 'User');
+      this.log('User joined: ' + data.userId);
+    }
+
+    if (data.type === 'user-left') {
+      this.removeUser(data.userId);
+      this.log('User left: ' + data.userId);
+    }
+  }
+
+  async handleUserOffer(data) {
+    try {
+      this.userPC = new RTCPeerConnection({iceServers: CONFIG.ICE_SERVERS});
+
+      this.localStream.getTracks().forEach(track => {
+        this.userPC.addTrack(track, this.localStream);
+      });
+
+      this.userPC.ontrack = e => {
+        document.getElementById('userVideo').srcObject = e.streams[0];
+        document.getElementById('userName').textContent = data.name || 'User';
+        this.startStatsMonitor('userStats', e.streams[0]);
+        this.log('User video stream received');
+      };
+
+      this.userPC.onicecandidate = e => {
+        if (e.candidate) {
+          this.send({
+            to: data.from,
+            type: 'ice',
+            candidate: e.candidate,
+            from: 'host'
+          });
+        }
+      };
+
+      this.userPC.onconnectionstatechange = () => {
+        this.log('User PC state: ' + this.userPC.connectionState);
+        if (this.userPC.connectionState === 'failed') {
+          this.handleError(new Error('User connection failed'));
+        }
+      };
+
+      await this.userPC.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      const answer = await this.userPC.createAnswer();
+      await this.userPC.setLocalDescription(answer);
+      this.send({to: data.from, type: 'answer', sdp: answer, to: data.from});
+      this.log('Answer sent to user');
+
+    } catch (err) {
+      this.handleError(err);
+    }
+  }
+
+  addUserToList(id, name) {
+    this.users.set(id, name);
+    const list = document.getElementById('userList');
+    list.innerHTML = '';
+    this.users.forEach((n, i) => {
+      list.innerHTML += `
+        <div class="user-item">
+          <div class="status-dot"></div>
+          <div>
+            <div>${n}</div>
+            <small style="opacity:0.6">${i}</small>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  removeUser(id) {
+    this.users.delete(id);
+    if (this.userPC) {
+      this.userPC.close();
+      this.userPC = null;
+    }
+    document.getElementById('userVideo').srcObject = null;
+    document.getElementById('userName').textContent = 'User disconnected';
+    document.getElementById('userStats').textContent = 'No connection';
+
+    const list = document.getElementById('userList');
+    if (this.users.size === 0) {
+      list.innerHTML = '<div style="opacity:0.5">No users yet</div>';
+    } else {
+      this.addUserToList(Array.from(this.users.keys())[0], Array.from(this.users.values())[0]);
+    }
+  }
+
+  startStatsMonitor(elementId, stream) {
+    setInterval(() => {
+      if (stream && stream.active) {
+        const tracks = stream.getTracks();
+        const videoTrack = tracks.find(t => t.kind === 'video');
+        const audioTrack = tracks.find(t => t.kind === 'audio');
+        let stats = '';
+        if (videoTrack) stats += 'Video: ' + videoTrack.readyState + ' ';
+        if (audioTrack) stats += '| Audio: ' + audioTrack.readyState;
+        document.getElementById(elementId).textContent = stats || 'Active';
+      }
+    }, 2000);
+  }
+
+  async attemptReconnect() {
+    if (this.reconnectAttempts >= CONFIG.MAX_RECONNECT) {
+      this.updateNetworkStatus('Max retries reached. Refresh page.', 'error');
+      return;
+    }
+    this.reconnectAttempts++;
+    this.updateNetworkStatus(`Reconnecting ${this.reconnectAttempts}/${CONFIG.MAX_RECONNECT}...`, 'info');
+    this.log('Attempting reconnect...');
+
+    setTimeout(() => {
+      this.connectWebSocket();
+    }, CONFIG.RECONNECT_DELAY);
+  }
+
+  send(msg) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(msg));
+    } else {
+      this.log('Cannot send, WebSocket not open');
+    }
+  }
+
+  toggleMic() {
+    if (this.localStream) {
+      this.localStream.getAudioTracks().forEach(t => t.enabled =!t.enabled);
+      this.log('Microphone toggled');
+    }
+  }
+
+  toggleCam() {
+    if (this.localStream) {
+      this.localStream.getVideoTracks().forEach(t => t.enabled =!t.enabled);
+      this.log('Camera toggled');
+    }
+  }
+
+  startRecording() {
+    try {
+      this.recorder = new MediaRecorder(this.localStream, {mimeType: 'video/webm;codecs=vp9'});
+      this.recordedChunks = [];
+      this.recorder.ondataavailable = e => {
+        if (e.data.size > 0) this.recordedChunks.push(e.data);
+      };
+      this.recorder.onstop = () => {
+        const blob = new Blob(this.recordedChunks, {type: 'video/webm'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `host-recording-${Date.now()}.webm`;
+        a.click();
+        this.log('Recording saved');
+      };
+      this.recorder.start(1000);
+      alert('Recording started. Click End Session to stop and download.');
+    } catch (err) {
+      this.handleError(err);
+    }
+  }
+
+  endSession() {
+    if (confirm('End session for all users?')) {
+      this.send({type: 'end-session', to: 'all'});
+      this.log('Session ended by host');
+      setTimeout(() => location.reload(), 1000);
+    }
+  }
+
+  handleError(err) {
+    console.error(err);
+    this.log('ERROR: ' + err.message);
+    this.updateNetworkStatus('Error occurred', 'error');
+  }
+
+  updateNetworkStatus(msg, type) {
+    const el = document.getElementById('networkStatus');
+    el.textContent = '● ' + msg;
+    el.style.background = type === 'success'? 'rgba(0,255,0,0.3)' :
+                          type === 'error'? 'rgba(255,0,0,0.3)' : 'rgba(0,0,0,0.5)';
+  }
+
+  log(msg) {
+    const logBox = document.getElementById('logBox');
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    logBox.appendChild(entry);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+}
+
+function toggleMenu() {
+  document.getElementById('sidebar').classList.toggle('hidden');
+}
+
+const host = new HostClient();
+function toggleMic() { host.toggleMic(); }
+function toggleCam() { host.toggleCam(); }
+function startRecording() { host.startRecording(); }
+function endSession() { host.endSession(); }
+</script>
+</body>
+</html>
