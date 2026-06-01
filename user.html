@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User - WebRTC Meeting</title>
+<title>User - WhatsApp Web</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
 body {
@@ -12,19 +12,14 @@ body {
   color:#fff;
   padding:15px;
 }
-.container {
-  max-width:500px;
-  margin:0 auto;
-}
+.container { max-width:500px; margin:0 auto; }
 .join-box {
   background: rgba(255,255,255,0.1);
   backdrop-filter: blur(20px);
   padding:25px 20px;
   border-radius:20px;
-  border:1px solid rgba(255,255,255,0.2);
   margin-bottom:15px;
 }
-h2 { text-align:center; margin-bottom:15px; font-size:22px; }
 input {
   width:100%;
   padding:14px;
@@ -45,22 +40,12 @@ input {
   font-size:17px;
   font-weight:700;
   cursor:pointer;
-  margin-bottom:10px;
 }
-#localVideo {
+video {
   width:100%;
   border-radius:15px;
   background:#000;
-  display:none;
-  margin-bottom:15px;
-}
-.chat-section {
-  display:none;
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(20px);
-  border-radius:15px;
-  padding:12px;
-  border:1px solid rgba(255,255,255,0.1);
+  margin:15px 0;
 }
 .chat-container {
   display:flex;
@@ -74,7 +59,6 @@ input {
   flex:1;
   overflow-y:auto;
   padding:10px;
-  font-size:14px;
   display:flex;
   flex-direction:column;
   gap:6px;
@@ -83,18 +67,9 @@ input {
   max-width:75%;
   padding:8px 12px;
   border-radius:12px;
-  word-wrap:break-word;
 }
-.chat-bubble.me {
-  background:#075e54;
-  align-self:flex-end;
-  border-bottom-right-radius:4px;
-}
-.chat-bubble.other {
-  background: rgba(255,255,255,0.15);
-  align-self:flex-start;
-  border-bottom-left-radius:4px;
-}
+.chat-bubble.me { background:#075e54; align-self:flex-end; }
+.chat-bubble.other { background: rgba(255,255,255,0.15); align-self:flex-start; }
 .chat-input-area {
   display:flex;
   align-items:center;
@@ -109,7 +84,6 @@ input {
   border:none;
   background: rgba(255,255,255,0.1);
   color:#fff;
-  font-size:14px;
   margin-bottom:0;
 }
 .icon-btn {
@@ -121,170 +95,123 @@ input {
   color:#fff;
   font-size:18px;
   cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-.room-info {
-  text-align:center;
-  background: rgba(16,185,129,0.2);
-  padding:8px;
-  border-radius:8px;
-  margin-bottom:12px;
-  font-weight:700;
 }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="join-box" id="joinBox">
-    <h2>🎤 Join Meeting</h2>
-    <div class="room-info" id="roomInfo">Room: public</div>
-    <input type="text" id="nameInput" placeholder="Enter your full name">
-    <input type="text" id="uidInput" placeholder="Enter Room UID - leave empty for public">
+    <h2>Join Meeting</h2>
+    <input type="text" id="nameInput" placeholder="Enter username">
+    <input type="text" id="uidInput" placeholder="Room code from host">
     <button class="btn" id="connectBtn">Connect</button>
   </div>
 
   <video id="localVideo" autoplay muted playsinline></video>
 
-  <div class="chat-section" id="chatSection">
-    <div class="chat-container">
-      <div class="chat-log" id="chatLog"></div>
-      <div class="chat-input-area">
-        <input type="text" id="chatInput" placeholder="Type a message">
-        <button class="icon-btn" id="voiceBtn">🎤</button>
-        <button class="icon-btn" id="sendBtn" style="background:#128c7e;">⌨️</button>
-      </div>
+  <div class="chat-container" id="chatBox" style="display:none">
+    <div class="chat-log" id="chatLog"></div>
+    <div class="chat-input-area">
+      <input type="text" id="chatInput" placeholder="Type message">
+      <input type="file" id="fileInput" style="display:none">
+      <button class="icon-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+      <button class="icon-btn" id="voiceBtn">🎤</button>
+      <button class="icon-btn" id="sendBtn" style="background:#128c7e;">⌨️</button>
     </div>
   </div>
 </div>
 
 <script>
 const WS_URL = 'wss://webrtsc-server.onrender.com';
-let ws, localStream, pc, roomId = 'public', myName;
+let ws, pc, localStream, roomId, myName, hostId;
 
-document.getElementById('connectBtn').addEventListener('click', async () => {
+document.getElementById('connectBtn').onclick = async () => {
   myName = document.getElementById('nameInput').value.trim();
-  const uid = document.getElementById('uidInput').value.trim();
-  roomId = uid || 'public';
+  roomId = document.getElementById('uidInput').value.trim() || 'public';
 
-  if(myName.length < 2) {
-    alert('Please enter your full name');
-    return;
-  }
+  if (myName.length < 2) return alert('Enter username');
 
-  document.getElementById('roomInfo').textContent = 'Room: ' + roomId;
+  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  document.getElementById('localVideo').srcObject = localStream;
+  document.getElementById('joinBox').style.display = 'none';
+  document.getElementById('chatBox').style.display = 'flex';
 
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    document.getElementById('localVideo').srcObject = localStream;
-    document.getElementById('localVideo').style.display = 'block';
-    document.getElementById('joinBox').style.display = 'none';
-    document.getElementById('chatSection').style.display = 'block';
-    connectWS();
-    loadChat();
-  } catch(e) {
-    alert('Allow camera + mic permission');
-  }
-});
-
-function connectWS() {
   ws = new WebSocket(WS_URL);
-
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'join', role: 'user', roomId, name: myName }));
-  };
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'join', role: 'user', roomId, name: myName }));
 
   ws.onmessage = async (e) => {
     const data = JSON.parse(e.data);
-    if(data.type === 'offer') await handleOffer(data);
-    if(data.type === 'ice-candidate') await pc.addIceCandidate(data.candidate);
-    if(data.type === 'chat') receiveChat(data);
-    if(data.type === 'voice') receiveVoice(data);
-    if(data.type === 'approve') console.log('Approved by host');
+    if (data.type === 'approve') startCall();
+    if (data.type === 'offer') handleOffer(data);
+    if (data.type === 'ice') await pc.addIceCandidate(data.candidate);
+    if (data.type === 'chat') showChat(data.from, data.msg);
   };
+};
+
+async function startCall() {
+  pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  pc.onicecandidate = e => e.candidate && ws.send(JSON.stringify({ type: 'ice', target: hostId, candidate: e.candidate }));
 }
 
 async function handleOffer(data) {
-  pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-  pc.onicecandidate = (e) => {
-    if(e.candidate) ws.send(JSON.stringify({ type: 'ice-candidate', target: data.from, candidate: e.candidate }));
-  };
-
+  hostId = data.from;
+  if (!pc) await startCall();
   await pc.setRemoteDescription(data.offer);
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
-  ws.send(JSON.stringify({ type: 'answer', target: data.from, answer }));
+  ws.send(JSON.stringify({ type: 'answer', target: hostId, answer }));
 }
 
-function receiveChat(data) {
-  addChatBubble(data.name, data.msg, 'other');
-  saveChat(data.name, data.msg, 'other');
-}
-
-function receiveVoice(data) {
-  addChatBubble(data.name, '🎤 Voice note', 'other');
-  saveChat(data.name, '[Voice]', 'other');
-}
-
-function addChatBubble(name, msg, type) {
+function showChat(from, msg) {
   const div = document.createElement('div');
-  div.className = 'chat-bubble ' + type;
-  div.innerHTML = `<b>${name}:</b> ${msg}`;
+  div.className = 'chat-bubble other';
+  div.textContent = 'Host: ' + msg;
   document.getElementById('chatLog').appendChild(div);
-  document.getElementById('chatLog').scrollTop = 99999;
 }
 
-function saveChat(name, msg, type) {
-  const chats = JSON.parse(localStorage.getItem('userChat_'+roomId) || '[]');
-  chats.push({ name, msg, type, time: Date.now() });
-  localStorage.setItem('userChat_'+roomId, JSON.stringify(chats));
-}
-
-function loadChat() {
-  const chats = JSON.parse(localStorage.getItem('userChat_'+roomId) || '[]');
-  chats.forEach(c => addChatBubble(c.name, c.msg, c.type));
-}
-
-document.getElementById('sendBtn').addEventListener('click', sendChat);
-document.getElementById('chatInput').addEventListener('keypress', (e) => {
-  if(e.key === 'Enter') sendChat();
-});
-
-function sendChat() {
-  const input = document.getElementById('chatInput');
-  const msg = input.value.trim();
-  if(msg && ws.readyState === 1) {
-    ws.send(JSON.stringify({ type: 'chat', roomId, msg, name: myName }));
-    addChatBubble(myName, msg, 'me');
-    saveChat(myName, msg, 'me');
-    input.value = '';
+document.getElementById('sendBtn').onclick = () => {
+  const msg = document.getElementById('chatInput').value.trim();
+  if (msg && ws.readyState === 1) {
+    ws.send(JSON.stringify({ type: 'chat', target: hostId, msg }));
+    const div = document.createElement('div');
+    div.className = 'chat-bubble me';
+    div.textContent = 'You: ' + msg;
+    document.getElementById('chatLog').appendChild(div);
+    document.getElementById('chatInput').value = '';
   }
-}
+};
 
-let mediaRecorder, audioChunks = [];
-document.getElementById('voiceBtn').addEventListener('click', async () => {
-  if(!mediaRecorder || mediaRecorder.state === 'inactive') {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(audioChunks, { type: 'audio/webm' });
-      audioChunks = [];
-      ws.send(JSON.stringify({ type: 'voice', roomId, name: myName }));
-      addChatBubble(myName, '🎤 Voice note', 'me');
-      saveChat(myName, '[Voice]', 'me');
-      stream.getTracks().forEach(t => t.stop());
-    };
-    mediaRecorder.start();
-    document.getElementById('voiceBtn').style.background = '#ef4444';
-  } else {
-    mediaRecorder.stop();
-    document.getElementById('voiceBtn').style.background = '#25d366';
-  }
-});
+// File upload
+document.getElementById('fileInput').onchange = (e) => {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+  reader.onload = () => {
+    ws.send(JSON.stringify({ type: 'file', target: hostId, fileName: file.name, fileData: reader.result }));
+  };
+  reader.readAsDataURL(file);
+};
+
+// Voice recording
+let recorder, chunks = [];
+document.getElementById('voiceBtn').onmousedown = async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = e => chunks.push(e.data);
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: 'audio/webm' });
+    const reader = new FileReader();
+    reader.onload = () => ws.send(JSON.stringify({ type: 'voice', target: hostId, fileName: 'voice.webm', fileData: reader.result }));
+    reader.readAsDataURL(blob);
+    chunks = [];
+  };
+  recorder.start();
+  document.getElementById('voiceBtn').style.background = '#ef4444';
+};
+document.getElementById('voiceBtn').onmouseup = () => {
+  recorder?.stop();
+  document.getElementById('voiceBtn').style.background = '#25d366';
+};
 </script>
 </body>
 </html>
