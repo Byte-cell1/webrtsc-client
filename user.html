@@ -12,19 +12,19 @@ body {
   color:#fff;
   padding:15px;
 }
-.container { max-width:500px; margin:0 auto; }
+.container { max-width:520px; margin:0 auto; }
 .join-box {
   background: rgba(255,255,255,0.1);
   backdrop-filter: blur(20px);
-  padding:25px 20px;
+  padding:28px 22px;
   border-radius:20px;
   margin-bottom:15px;
 }
 input {
   width:100%;
-  padding:14px;
+  padding:15px;
   margin-bottom:12px;
-  border-radius:10px;
+  border-radius:12px;
   border:2px solid rgba(255,255,255,0.3);
   background: rgba(0,0,0,0.2);
   color:#fff;
@@ -32,79 +32,77 @@ input {
 }
 .btn {
   width:100%;
-  padding:16px;
+  padding:17px;
   border:none;
-  border-radius:10px;
+  border-radius:12px;
   background:#fff;
   color:#1e3c72;
   font-size:17px;
   font-weight:700;
   cursor:pointer;
 }
-
-/* Tiny camera preview - user knows it's on but doesn't take space */
-#localVideo {
-  width:70px;
-  height:70px;
-  border-radius:50%;
-  position:fixed;
-  bottom:80px;
-  right:10px;
-  border:3px solid #10b981;
-  box-shadow:0 4px 12px rgba(0,0,0,0.5);
-  z-index:999;
-  object-fit:cover;
-}
-
 .chat-container {
   display:flex;
   flex-direction:column;
-  height:calc(100vh - 200px);
-  background: rgba(0,0,0,0.2);
-  border-radius:10px;
+  height:calc(100vh - 120px);
+  background: rgba(255,255,255,0.08);
+  border-radius:16px;
   overflow:hidden;
+}
+.chat-header {
+  padding:12px;
+  background: rgba(0,0,0,0.3);
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.chat-header video {
+  width:50px;
+  height:50px;
+  border-radius:50%;
+  border:2px solid #10b981;
+  object-fit:cover;
 }
 .chat-log {
   flex:1;
   overflow-y:auto;
-  padding:10px;
+  padding:12px;
   display:flex;
   flex-direction:column;
-  gap:6px;
+  gap:8px;
 }
 .chat-bubble {
-  max-width:75%;
-  padding:8px 12px;
-  border-radius:12px;
+  max-width:78%;
+  padding:10px 14px;
+  border-radius:14px;
 }
 .chat-bubble.me { background:#075e54; align-self:flex-end; }
-.chat-bubble.other { background: rgba(255,255,255,0.15); align-self:flex-start; }
-.img-msg { max-width:180px; border-radius:8px; margin-top:5px; }
-.audio-msg { width:180px; margin-top:5px; }
+.chat-bubble.other { background: rgba(255,255,255,0.12); align-self:flex-start; }
+.img-msg { max-width:200px; border-radius:10px; margin-top:6px; }
+.audio-msg { width:200px; margin-top:6px; }
 .chat-input-area {
   display:flex;
   align-items:center;
-  gap:6px;
-  padding:8px;
-  background: rgba(0,0,0,0.3);
+  gap:8px;
+  padding:10px;
+  background: rgba(0,0,0,0.35);
 }
 .chat-input-area input {
   flex:1;
-  padding:10px;
-  border-radius:20px;
+  padding:12px;
+  border-radius:22px;
   border:none;
   background: rgba(255,255,255,0.1);
   color:#fff;
-  margin-bottom:0;
 }
 .icon-btn {
-  width:40px;
-  height:40px;
+  width:42px;
+  height:42px;
   border-radius:50%;
   border:none;
   background:#25d366;
   color:#fff;
-  font-size:18px;
+  font-size:19px;
   cursor:pointer;
 }
 </style>
@@ -118,10 +116,14 @@ input {
     <button class="btn" id="connectBtn">Connect</button>
   </div>
 
-  <!-- Tiny camera preview - user sees it, monitor gets full stream -->
-  <video id="localVideo" autoplay muted playsinline></video>
-
   <div class="chat-container" id="chatBox" style="display:none">
+    <div class="chat-header">
+      <video id="localVideo" autoplay muted playsinline></video>
+      <div>
+        <div style="font-weight:700">Connected</div>
+        <div style="font-size:12px;opacity:0.8">Camera active</div>
+      </div>
+    </div>
     <div class="chat-log" id="chatLog"></div>
     <div class="chat-input-area">
       <input type="text" id="chatInput" placeholder="Type message">
@@ -140,7 +142,6 @@ let ws, pc, localStream, roomId, myName, hostId;
 document.getElementById('connectBtn').onclick = async () => {
   myName = document.getElementById('nameInput').value.trim();
   roomId = document.getElementById('uidInput').value.trim() || 'public';
-
   if (myName.length < 2) return alert('Enter username');
 
   localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
